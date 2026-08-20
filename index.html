@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STEP: Score-Based Temporal Energy for Human Pose VAD</title>
+  <script>
+    MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]']],
+        tags: 'none'
+      },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+  <style>
+    :root {
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --text: #1e293b;
+      --muted: #64748b;
+      --bg: #ffffff;
+      --card: #f1f5f9;
+      --border: #e2e8f0;
+      --code-bg: #f1f5f9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1e40af 100%);
+      color: #fff;
+      padding: 64px 24px 48px;
+      text-align: center;
+      position: relative;
+    }
+    .eccv-logo {
+      position: absolute;
+      bottom: 0;
+      right: 24px;
+      height: clamp(42px, 13vw, 160px);
+      width: auto;
+      opacity: 0.92;
+      z-index: 0;
+    }
+    @media (max-width: 1080px) {
+      .eccv-logo {
+        position: static;
+        display: block;
+        margin: 20px auto 0;
+        height: 110px;
+      }
+    }
+    .venue {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.2;
+      max-width: 820px;
+      margin: 0 auto 28px;
+      letter-spacing: -0.02em;
+    }
+    h1 .highlight { color: #93c5fd; }
+    .authors {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px 24px;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    .authors a { color: #bfdbfe; text-decoration: none; }
+    .authors a:hover { text-decoration: underline; }
+    .affiliations {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 32px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
+    .btn-arxiv  { background: #b91c1c; color: #fff; }
+    .btn-github { background: #1f2937; color: #fff; }
+    .btn-paper  { background: #065f46; color: #fff; }
+    .btn svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── Main content ── */
+    main { max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; }
+    section { margin-top: 60px; }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 6px;
+      margin-bottom: 20px;
+    }
+    h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--muted);
+      margin: 32px 0 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    /* ── Abstract ── */
+    .abstract-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 32px;
+      font-size: 0.97rem;
+    }
+
+    /* ── Method figure ── */
+    figure { margin: 0; text-align: center; }
+    figure img {
+      max-width: 100%;
+    }
+    figcaption {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: left;
+    }
+
+    /* ── Video grids ── */
+    .video-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .video-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .video-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .video-grid.cols-1 { grid-template-columns: 1fr; max-width: 640px; margin: 0 auto; }
+    @media (max-width: 640px) {
+      .video-grid.cols-2,
+      .video-grid.cols-3 { grid-template-columns: 1fr; }
+    }
+
+    .video-card {
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      min-height: 100px;
+    }
+    .video-card video {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .video-label {
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin-right: 4px;
+    }
+    .tag-ubn  { background: #fef3c7; color: #92400e; }
+    .tag-st   { background: #dbeafe; color: #1e40af; }
+    .tag-supp { background: #f0fdf4; color: #14532d; }
+
+    /* ── Results table ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    thead tr { background: #0f172a; color: #fff; }
+    thead th { padding: 12px 16px; font-weight: 600; text-align: left; }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 11px 16px; }
+    tbody tr:nth-child(even) { background: #e8edf2; }
+    .best { font-weight: 700; color: var(--accent-dark); }
+    .ours { background: #eff6ff !important; }
+    .ours td { font-weight: 600; color: #1e40af; }
+
+    /* ── BibTeX ── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      overflow-x: auto;
+      line-height: 1.6;
+      color: #334155;
+    }
+
+    /* ── Math ── */
+    .math-block {
+      overflow-x: auto;
+      margin: 18px 0;
+      padding: 4px 0;
+      text-align: center;
+      font-size: 1.05rem;
+    }
+    .eq-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .method-text {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: var(--text);
+      margin-bottom: 14px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 32px 24px;
+      border-top: 1px solid var(--border);
+      margin-top: 64px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<header>
+  <h1><span class="highlight">STEP:</span> Score-Based Temporal Energy for<br>Human Pose Video Anomaly Detection</h1>
+
+  <div class="authors">
+    <span>Jakub Micorek<sup>1</sup></span>
+    <span>Mateusz Koziński<sup>2</sup></span>
+    <span>Horst Possegger<sup>1</sup></span>
+  </div>
+  <div class="affiliations">
+    <sup>1</sup>Institute of Visual Computing, Graz University of Technology &nbsp;&nbsp;
+    <sup>2</sup>Medical University of Graz
+  </div>
+
+  <div class="links">
+    <a class="btn btn-arxiv" href="https://arxiv.org/abs/XXXX.XXXXX" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M2.4 0C1.08 0 0 1.08 0 2.4v19.2C0 22.92 1.08 24 2.4 24h19.2c1.32 0 2.4-1.08 2.4-2.4V2.4C24 1.08 22.92 0 21.6 0H2.4zm3.36 6h3.6l2.4 3.6L14.16 6h3.6L13.2 12l4.8 6h-3.6L12 14.4 9.6 18H6l4.8-6L6 6h-.24z"/></svg>
+      arXiv
+    </a>
+    <a class="btn btn-github" href="https://github.com/jakubmicorek/STEP" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.08-.74.08-.73.08-.73 1.2.09 1.83 1.23 1.83 1.23 1.06 1.82 2.79 1.29 3.47.99.11-.77.42-1.29.76-1.59-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.17 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.65 1.65.24 2.87.12 3.17.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      Code
+    </a>
+    <!-- Paper link to be added after the conference.
+    <a class="btn btn-paper" href="https://link.springer.com/chapter/TODO" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6zm7 1.5L18.5 9H13V3.5zM8 13h8v1.5H8V13zm0 3h6v1.5H8V16zm0-6h3v1.5H8V10z"/></svg>
+      ECCV 2026 Proceedings
+    </a>
+    -->
+  </div>
+  <img src="images/ECCV_2026_Logo_white.svg" alt="ECCV 2026" class="eccv-logo" />
+</header>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+  <!-- Teaser videos -->
+  <section>
+    <div class="video-grid cols-2" style="margin-top:8px;align-items:start;">
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/01_0025.mp4" type="video/mp4">
+        </video>
+        <div class="video-label"><span class="tag tag-st">ShanghaiTech</span> Clip 01_0025</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_6_scenario_8.mp4" type="video/mp4">
+        </video>
+        <div class="video-label"><span class="tag tag-ubn">UBnormal</span> Scene 6 · Scenario 8</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:16px;">
+      <a class="btn btn-github" href="#qual-shanghaitech">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>
+        Examples ShanghaiTech
+      </a>
+      <a class="btn btn-github" href="#qual-ubnormal">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>
+        Examples UBnormal
+      </a>
+      <a class="btn btn-github" href="#confidence-weighting">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>
+        Confidence Weighting
+      </a>
+      <a class="btn btn-github" href="#sam3-tracking">
+        <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>
+        SAM3 Video Tracker
+      </a>
+    </div>
+  </section>
+
+  <!-- Abstract -->
+  <section>
+    <h2>Abstract</h2>
+    <div class="abstract-card">
+      Skeleton-based Video Anomaly Detection (VAD) offers a robust, privacy-preserving solution for identifying abnormal behaviors. To model the distribution of normal static and moving poses, recent methods train Energy-Based Models (EBMs) via Denoising Score Matching (DSM). However, directly injecting noise, required for training, into raw joint coordinates creates physically impossible poses, and this structural collapse severely worsens as the temporal window expands.
+      <br><br>
+      To address this, we introduce STEP, a simple framework that utilizes Principal Component Analysis (PCA) to project pose sequences into a compact, whitened PC-space. Learning the data density within this well-behaved PC-space ensures that the injected noise translates into physically plausible variations, which allows the model to process longer video sequences without the performance collapse of raw coordinate baselines. Additionally, to mitigate inherent pose estimation inaccuracies arising from occlusions or motion blur, we integrate a sequence-level weighting mechanism based on the estimator's confidence scores.
+      <br><br>
+      Operating at real-time computational efficiency, our simple and lightweight framework outperforms the previous skeleton-based state-of-the-art by 12.2% (90.1% AUROC) on the challenging UBnormal dataset and achieves highly competitive results by improving on the ShanghaiTech benchmark.
+    </div>
+  </section>
+
+  <!-- Method -->
+  <section>
+    <h2>Method</h2>
+    <figure>
+      <img src="images/pipeline.png" alt="STEP pipeline overview" />
+      <figcaption>
+        <strong>The STEP Pipeline.</strong>
+        <strong>Left:</strong> Human poses are extracted from the raw video. We highlight a static person (blue), a walking person (green), and an anomalous cyclist (red). DSM training requires perturbing training samples with Gaussian noise. Naively adding this noise directly to pixel coordinates destroys the kinematic structure, creating physically impossible poses (gray).
+        <strong>Middle:</strong> In contrast, we fit a PCA on all training poses and project sequences into the resulting compact, whitened PC-space. There, the injected isotropic noise translates into semantically meaningful action variations (smoothly inducing motion in the static blue pose sequence) while yielding structurally plausible bone lengths and human proportions.
+        <strong>Right:</strong> Consequently, the Energy-Based Model learns smoothed, well-behaved energy landscapes at different &sigma; scales (top). During inference, we evaluate the sequence across distinct noise scales (&sigma;<sub>low</sub>&nbsp;=&nbsp;0.1 to &sigma;<sub>high</sub>&nbsp;=&nbsp;1.0). Normal actions (static and walking) fall into lower-energy basins across these scales, while the anomalous cyclist yields a high-energy score.
+      </figcaption>
+    </figure>
+
+  </section>
+
+  <!-- Qualitative Results -->
+  <section>
+    <h2>Qualitative Results</h2>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:4px;">
+      Per-person anomaly scores are visualised directly on the skeleton. Normal behaviour is rendered in green; as the estimated energy rises, the colour shifts through orange towards red, signalling an anomaly. The text box above each person shows the mean pose confidence score (top) and the final confidence-weighted anomaly score (bottom); its colour uniquely identifies the person's track throughout the sequence.
+    </p>
+
+    <!-- ShanghaiTech -->
+    <h3 id="qual-shanghaitech"><span class="tag tag-st">ShanghaiTech</span></h3>
+    <div class="video-grid cols-2" style="align-items:start;">
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/01_0025.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Clip 01_0025</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/ShanghaiTech_01_0014.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Clip 01_0014</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/ShanghaiTech_01_0026.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Clip 01_0026</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/ShanghaiTech_01_0063.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Clip 01_0063</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/ShanghaiTech_01_0129.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Clip 01_0129</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/ShanghaiTech_01_0130.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Clip 01_0130</div>
+      </div>
+    </div>
+
+    <!-- UBnormal scenes -->
+    <h3 id="qual-ubnormal"><span class="tag tag-ubn">UBnormal</span></h3>
+    <div class="video-grid cols-2" style="align-items:start;">
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_2_scenario_6.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 2 · Scenario 6</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_5_scenario_5.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 5 · Scenario 5</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/abnormal_scene_24_scenario_2.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 24 · Scenario 2</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_16_scenario_2.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 16 · Scenario 2</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_11_scenario_1.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 11 · Scenario 1</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_12_scenario_1.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 12 · Scenario 1</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_26_scenario_3.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 26 · Scenario 3</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/UBnormal_abnormal_scene_6_scenario_8.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Scene 6 · Scenario 8</div>
+      </div>
+    </div>
+
+    <!-- Confidence weighting -->
+    <h3 id="confidence-weighting">Confidence Weighting</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:16px;">
+      An occluded person sitting on a bench receives a low pose confidence score from the pose estimator. Without confidence weighting, the noisy, low-confidence skeleton causes the model to wrongly flag this normal person as anomalous (false positive). With confidence weighting, the model discounts the unreliable detection and correctly suppresses the false alarm. More generally, confidence weighting mitigates false positives caused by low-confidence detections, such as occlusions. During training it also prevents unreliable pose estimates and tracking failures from distorting the learned energy landscape, allowing the model to leverage the full training set while down-weighting erroneous detections. The text box above each tracked person shows the mean confidence score <em>c</em> (top) and the final confidence-weighted anomaly score (bottom).
+    </p>
+    <div class="video-grid cols-1" style="max-width:100%;">
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/abnormal_scene_10_scenario_3_confidence_comparison.mp4" type="video/mp4">
+        </video>
+        <div class="video-label"><span class="tag tag-ubn">UBnormal</span> Scene 10 · Scenario 3: without confidence weighting (left) vs. with (right)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quantitative Results -->
+  <section>
+    <h2>Quantitative Results</h2>
+
+    <h3><span class="tag tag-st">ShanghaiTech</span> &amp; <span class="tag tag-ubn">UBnormal</span></h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:16px;">
+      AUROC (%) on the Full and Human-Related (HR) test sets. STEP reported as mean &plusmn; std over 20 independent training runs.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Method</th>
+            <th colspan="2" style="text-align:center;border-bottom:1px solid rgba(255,255,255,0.2);">ShanghaiTech</th>
+            <th colspan="2" style="text-align:center;border-bottom:1px solid rgba(255,255,255,0.2);">UBnormal</th>
+          </tr>
+          <tr>
+            <th>Full</th><th>HR</th><th>Full</th><th>HR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>GEPC (2020)</td><td>76.1</td><td>74.8</td><td>53.4</td><td>55.2</td></tr>
+          <tr><td>MoCoDAD (2023)</td><td>n/a</td><td>77.6</td><td>68.3</td><td>68.4</td></tr>
+          <tr><td>MULDE, <em>T</em>=1 (2024)</td><td>78.5</td><td>n/a</td><td>80.6</td><td>n/a</td></tr>
+          <tr><td>STG-NF (2023)</td><td>85.9</td><td>87.4</td><td>71.8</td><td>71.5</td></tr>
+          <tr><td>SeeKer (2025)</td><td>85.5</td><td>86.9</td><td>77.9</td><td>78.9</td></tr>
+          <tr class="ours">
+            <td><strong>STEP</strong></td>
+            <td>86.2 &plusmn; 0.1</td>
+            <td>87.7 &plusmn; 0.1</td>
+            <td><span class="best">90.1 &plusmn; 0.4</span></td>
+            <td><span class="best">90.9 &plusmn; 0.4</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin-top:32px;"><span class="tag tag-supp">MSAD-HR</span></h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:12px;">
+      AUROC (%) on MSAD (360 held-out test clips: 120 normal + 240 anomalous, self-supervised).
+      MSAD contains 11 anomaly categories; 7 are <em>human-related</em> (HR: Assault, Fighting, People Falling, Robbery, Shooting, Traffic Accident, Vandalism) and 4 are scene-level events (Explosion, Fire, Object Falling, Water Incident) that a skeleton-based detector cannot flag.
+      <strong>ST-Style</strong> (following ShanghaiTech): excludes non-HR clips entirely.
+      <strong>UB-Style</strong> (following UBnormal): marks non-HR anomalous frames as normal.
+      <strong>Backtrack</strong>: non-causal, assigns score to past frames. <strong>Online</strong>: causal.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Method</th>
+            <th rowspan="2">Variant</th>
+            <th colspan="2" style="text-align:center;border-bottom:1px solid rgba(255,255,255,0.2);">Backtrack</th>
+            <th colspan="2" style="text-align:center;border-bottom:1px solid rgba(255,255,255,0.2);">Online</th>
+          </tr>
+          <tr>
+            <th>Raw</th><th>Smooth</th><th>Raw</th><th>Smooth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="6" style="background:#f1f5f9;font-size:0.82rem;color:var(--muted);font-style:italic;padding:7px 16px;">Prior skeleton-based methods (HR split style unspecified<sup>†</sup>)</td></tr>
+          <tr><td>STG-NF (2023)</td><td>MSAD-HR<sup>†</sup></td><td colspan="4" style="text-align:center;">55.7</td></tr>
+          <tr><td>SeeKer (2025)</td><td>MSAD-HR<sup>†</sup></td><td colspan="4" style="text-align:center;">61.1</td></tr>
+          <tr><td colspan="6" style="background:#eff6ff;font-size:0.82rem;color:#1e40af;font-style:italic;padding:7px 16px;">STEP: 360 test clips (120 normal + 240 anomalous)</td></tr>
+          <tr class="ours"><td><strong>STEP</strong></td><td>MSAD (all 11 categories)</td><td>57.6</td><td>59.9</td><td>56.4</td><td>59.6</td></tr>
+          <tr class="ours"><td><strong>STEP</strong></td><td>MSAD-HR / ST-Style</td><td>71.7</td><td>72.8</td><td>69.9</td><td>71.6</td></tr>
+          <tr class="ours"><td><strong>STEP</strong></td><td>MSAD-HR / UB-Style</td><td>73.9</td><td>75.4</td><td>72.2</td><td><span class="best">74.1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--muted);font-size:0.82rem;margin-top:8px;">
+      <sup>†</sup>Prior methods report a single MSAD-HR number without specifying which HR evaluation style was used.
+      Restricting evaluation to the 7 human-related categories removes the dilution caused by non-human anomalies, which skeleton-based methods are inherently blind to:
+      STEP reaches <strong>71.6%</strong> AUROC under ST-Style and <strong>74.1%</strong> under UB-Style (both Online Smooth).
+      The two HR evaluation styles differ only in how non-HR clips are treated: excluded entirely (ST-Style) or with non-HR anomalous frames relabeled as normal (UB-Style), and give consistent results.
+    </p>
+  </section>
+
+  <!-- SAM3 Tracking Comparison -->
+  <section>
+    <h2 id="sam3-tracking">Improved Extraction with SAM3 Tracking</h2>
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:20px;">
+      Detection-based trackers can miss persons in challenging conditions: crowds,
+      occlusion, low resolution, fog, or smoke. For a fair comparison with the
+      skeleton-based baselines, all STEP results reported on this page use the same
+      AlphaPose pose extractor as STG-NF and SeeKer. To show how STEP's scoring depends
+      on the upstream tracker, we replace the detection stage with <strong>SAM3</strong>
+      video instance segmentation, which propagates person masks across the full video
+      sequence; AlphaPose then extracts poses on each tracked instance. As the table
+      below shows, this better detector further improves the AUROC.
+      This is not real-time, but isolates the contribution of tracking quality.
+    </p>
+    <div class="video-grid cols-1" style="max-width:100%;">
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/abnormal_scene_8_scenario_1_fog_comparison.mp4" type="video/mp4">
+        </video>
+        <div class="video-label"><span class="tag tag-ubn">UBnormal</span> Scene 8 · Scenario 1 (Fog): AlphaPose (left) vs. SAM3 + AlphaPose (right)</div>
+      </div>
+      <div class="video-card">
+        <video autoplay muted loop playsinline>
+          <source src="videos/abnormal_scene_10_scenario_5_comparison.mp4" type="video/mp4">
+        </video>
+        <div class="video-label"><span class="tag tag-ubn">UBnormal</span> Scene 10 · Scenario 5: AlphaPose (left) vs. SAM3 + AlphaPose (right)</div>
+      </div>
+    </div>
+
+    <!-- Tracker comparison table -->
+    <h3>Quantitative impact of SAM3 tracking</h3>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:12px;">
+      AUROC (%) on UBnormal (Online + Gaussian smoothing). The same model is evaluated with test poses
+      extracted by each pipeline; only the tracking stage differs.
+      SAM3 video instance segmentation yields a <strong>+2.6 pp</strong> gain over detection-based tracking.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Person tracking</th>
+            <th>Pose extraction</th>
+            <th>UBnormal AUROC</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>AlphaPose detector</td>
+            <td>AlphaPose</td>
+            <td>90.6</td>
+          </tr>
+          <tr>
+            <td>SAM3 video instance segmentation</td>
+            <td>AlphaPose</td>
+            <td class="best">93.2</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- Datasets -->
+  <section>
+    <h2>Datasets</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
+      <a href="https://github.com/lilygeorgescu/UBnormal" target="_blank" class="btn btn-github" style="font-size:0.88rem;">
+        <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.08-.74.08-.73.08-.73 1.2.09 1.83 1.23 1.83 1.23 1.06 1.82 2.79 1.29 3.47.99.11-.77.42-1.29.76-1.59-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.17 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.65 1.65.24 2.87.12 3.17.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        UBnormal <span style="opacity:0.7;font-weight:400;">(CVPR 2022)</span>
+      </a>
+      <a href="https://svip-lab.github.io/dataset/campus_dataset.html" target="_blank" class="btn btn-github" style="font-size:0.88rem;">
+        <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.08-.74.08-.73.08-.73 1.2.09 1.83 1.23 1.83 1.23 1.06 1.82 2.79 1.29 3.47.99.11-.77.42-1.29.76-1.59-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.17 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.65 1.65.24 2.87.12 3.17.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        ShanghaiTech <span style="opacity:0.7;font-weight:400;">(CVPR 2016)</span>
+      </a>
+      <a href="https://msad-dataset.github.io/" target="_blank" class="btn btn-github" style="font-size:0.88rem;">
+        <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.54-1.38-1.33-1.75-1.33-1.75-1.08-.74.08-.73.08-.73 1.2.09 1.83 1.23 1.83 1.23 1.06 1.82 2.79 1.29 3.47.99.11-.77.42-1.29.76-1.59-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.17 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02.005 2.04.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.65 1.65.24 2.87.12 3.17.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.63-5.48 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        MSAD <span style="opacity:0.7;font-weight:400;">(NeurIPS 2024)</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- BibTeX -->
+  <section>
+    <h2>BibTeX</h2>
+<pre>@inproceedings{micorek2026step,
+  title     = {{STEP}: Score-Based Temporal Energy for Human Pose Video Anomaly Detection},
+  author    = {Micorek, Jakub and Kozi{\'n}ski, Mateusz and Possegger, Horst},
+  booktitle = {European Conference on Computer Vision (ECCV)},
+  year      = {2026}
+}</pre>
+  </section>
+
+</main>
+
+
+</body>
+</html>
